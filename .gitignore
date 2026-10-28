@@ -1,0 +1,40 @@
+# ---------- Secretos: nunca se suben ----------
+.env
+*.env
+!.env.example
+k8s/secret.yaml
+*-key.json
+credentials*.json
+service-account*.json
+
+# ---------- Terraform ----------
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+tfplan
+*.tfplan
+
+# ---------- Python ----------
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# ---------- Node / Vue ----------
+node_modules/
+dist/
+npm-debug.log*
+
+# ---------- Sistema y editores ----------
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
