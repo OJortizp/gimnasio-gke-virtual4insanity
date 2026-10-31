@@ -1,0 +1,65 @@
+# Microservicio Miembros · Rol 2 (ver CONTRATO.md, secciones 2, 7 y 8)
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-miembros
+  namespace: virtual4insanity
+  labels:
+    app: api-miembros
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-miembros
+  template:
+    metadata:
+      labels:
+        app: api-miembros
+    spec:
+      containers:
+        - name: api-miembros
+          image: us-central1-docker.pkg.dev/PROJECT_ID/gimnasio/api-miembros:v1
+          ports:
+            - containerPort: 5000
+          # DB_HOST, DB_PORT y DB_NAME salen del ConfigMap; DB_USER y DB_PASSWORD del Secret
+          envFrom:
+            - configMapRef:
+                name: gimnasio-config
+            - secretRef:
+                name: gimnasio-secret
+          # Listo para recibir tráfico solo cuando también responde la base
+          readinessProbe:
+            httpGet:
+              path: /api/miembros/health
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          # Vivo si el proceso responde; no depende de la base, para no reiniciarlo si la base se cae
+          livenessProbe:
+            tcpSocket:
+              port: 5000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-miembros
+  namespace: virtual4insanity
+  labels:
+    app: api-miembros
+spec:
+  type: ClusterIP
+  selector:
+    app: api-miembros
+  ports:
+    - port: 5000
+      targetPort: 5000
