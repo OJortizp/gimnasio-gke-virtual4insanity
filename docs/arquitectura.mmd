@@ -1,0 +1,104 @@
+flowchart TB
+    %% =========================================================================
+    %% Diagrama de Arquitectura — Sistema de Gestión de Gimnasio en GKE
+    %% Equipo: virtual4insanity | Caso 2: Gimnasio | Criterio A3
+    %% =========================================================================
+
+    subgraph EXT["Capa Externa · Cliente"]
+        USER["Usuario / Navegador Web<br/>Cliente HTTP Externo"]
+    end
+
+    subgraph GCP["Google Cloud Platform · Región: us-central1"]
+
+        subgraph AR["Artifact Registry · Repositorio Docker: gimnasio (us-central1)"]
+            IMG_FE["Imagen: frontend:v1<br/>us-central1-docker.pkg.dev/PROJECT_ID/gimnasio/frontend:v1"]
+            IMG_M["Imagen: api-miembros:v1<br/>us-central1-docker.pkg.dev/PROJECT_ID/gimnasio/api-miembros:v1"]
+            IMG_C["Imagen: api-clases:v1 / v2<br/>us-central1-docker.pkg.dev/PROJECT_ID/gimnasio/api-clases:v1"]
+            IMG_DB["Imagen: postgres:16-alpine<br/>us-central1-docker.pkg.dev/PROJECT_ID/gimnasio/postgres:16-alpine"]
+        end
+
+        subgraph GKE["Clúster GKE Standard Zonal: gke-virtual4insanity · Zona: us-central1-a (Node Pool: 2 nodos e2-small Spot)"]
+
+            subgraph NS["Namespace: virtual4insanity"]
+
+                subgraph INGRESS["Capa de Exposición Pública y Frontend"]
+                    SVC_FE["Service: frontend<br/>Tipo: LoadBalancer · IP Pública Externa<br/>Puerto: 80 → targetPort: 80"]
+                    DEP_FE["Deployment / Pod: frontend (app: frontend)<br/>Vue 3 (archivos estáticos en dist/) + Servidor Nginx<br/>Proxy inverso por DNS interno · Puerto: 80"]
+                end
+
+                subgraph APIS["Capa de Microservicios (Python 3.12 · Flask · Gunicorn)"]
+                    SVC_M["Service: api-miembros<br/>Tipo: ClusterIP<br/>DNS: api-miembros:5000"]
+                    DEP_M["Deployment / Pod: api-miembros (app: api-miembros)<br/>Rutas: /api/miembros y /api/miembros/integrantes<br/>Puerto contenedor: 5000"]
+
+                    SVC_C["Service: api-clases<br/>Tipo: ClusterIP<br/>DNS: api-clases:5000"]
+                    DEP_C["Deployment / Pod: api-clases (app: api-clases)<br/>Rutas: /api/clases<br/>Puerto contenedor: 5000"]
+                end
+
+                subgraph DATA["Capa de Datos y Almacenamiento Persistente"]
+                    SVC_DB["Service: db<br/>Tipo: ClusterIP<br/>DNS: db:5432"]
+                    DEP_DB["Deployment / Pod: db (app: db)<br/>Motor: PostgreSQL 16 · Base: gimnasio<br/>Tablas: integrantes, miembros, clases<br/>PGDATA: /var/lib/postgresql/data/pgdata · Puerto: 5432"]
+                    PVC_DB["PersistentVolumeClaim: db-pvc<br/>Capacidad: 1 Gi · ReadWriteOnce<br/>Montaje: /var/lib/postgresql/data"]
+                    CM_INIT["ConfigMap: db-init<br/>Script: db/init.sql<br/>Montaje: /docker-entrypoint-initdb.d (readOnly)"]
+                end
+
+                subgraph CFG["Configuración y Credenciales"]
+                    CM_APP["ConfigMap: gimnasio-config<br/>DB_HOST=db | DB_PORT=5432 | DB_NAME=gimnasio<br/>MIEMBROS_URL=http://api-miembros:5000<br/>EQUIPO=virtual4insanity"]
+                    SEC_APP["Secret: gimnasio-secret (Opaque)<br/>DB_USER | DB_PASSWORD"]
+                end
+
+            end
+        end
+    end
+
+    %% --- Flujo principal de tráfico de red ---
+    USER -->|"HTTP :80 (IP Pública)"| SVC_FE
+    SVC_FE -->|"TCP :80"| DEP_FE
+    DEP_FE -->|"HTTP GET/POST/PUT/DELETE<br/>/api/miembros... → http://api-miembros:5000"| SVC_M
+    DEP_FE -->|"HTTP GET/POST/PUT/DELETE<br/>/api/clases... → http://api-clases:5000"| SVC_C
+    SVC_M -->|"TCP :5000"| DEP_M
+    SVC_C -->|"TCP :5000"| DEP_C
+    DEP_C -->|"HTTP GET /api/miembros/<id><br/>Validación de miembro (DNS: api-miembros:5000)"| SVC_M
+
+    %% --- Flujo hacia Base de Datos y Persistencia ---
+    DEP_M -->|"TCP / PostgreSQL :5432 (DNS: db:5432)<br/>Tablas: miembros, integrantes"| SVC_DB
+    DEP_C -->|"TCP / PostgreSQL :5432 (DNS: db:5432)<br/>Tabla: clases"| SVC_DB
+    SVC_DB -->|"TCP :5432"| DEP_DB
+    DEP_DB -->|"Lectura / Escritura Persistente<br/>/var/lib/postgresql/data"| PVC_DB
+    CM_INIT -.->|"Inicialización SQL única<br/>/docker-entrypoint-initdb.d"| DEP_DB
+
+    %% --- Inyección de ConfigMap y Secret ---
+    CM_APP -.->|"envFrom (variables no sensibles)"| DEP_M
+    CM_APP -.->|"envFrom (variables no sensibles)"| DEP_C
+    CM_APP -.->|"valueFrom (POSTGRES_DB)"| DEP_DB
+    SEC_APP -.->|"envFrom (DB_USER, DB_PASSWORD)"| DEP_M
+    SEC_APP -.->|"envFrom (DB_USER, DB_PASSWORD)"| DEP_C
+    SEC_APP -.->|"valueFrom (POSTGRES_USER, POSTGRES_PASSWORD)"| DEP_DB
+
+    %% --- Descarga de imágenes desde Artifact Registry ---
+    IMG_FE -.->|"Image Pull"| DEP_FE
+    IMG_M -.->|"Image Pull"| DEP_M
+    IMG_C -.->|"Image Pull"| DEP_C
+    IMG_DB -.->|"Image Pull"| DEP_DB
+
+    %% --- Estilos visuales por capa ---
+    classDef external fill:#1E293B,stroke:#0F172A,stroke-width:2px,color:#FFFFFF
+    classDef lbService fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF
+    classDef frontendPod fill:#E0F2FE,stroke:#0284C7,stroke-width:2px,color:#0C4A6E
+    classDef internalSvc fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF
+    classDef apiPod fill:#CCFBF1,stroke:#0D9488,stroke-width:2px,color:#134E4A
+    classDef dbService fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF
+    classDef dbPod fill:#E0E7FF,stroke:#4F46E5,stroke-width:2px,color:#1E1B4B
+    classDef storage fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#78350F
+    classDef config fill:#F3E8FF,stroke:#9333EA,stroke-width:2px,color:#581C87
+    classDef registry fill:#FFF1F2,stroke:#E11D48,stroke-width:2px,color:#881337
+
+    class USER external
+    class SVC_FE lbService
+    class DEP_FE frontendPod
+    class SVC_M,SVC_C internalSvc
+    class DEP_M,DEP_C apiPod
+    class SVC_DB dbService
+    class DEP_DB dbPod
+    class PVC_DB storage
+    class CM_APP,SEC_APP,CM_INIT config
+    class IMG_FE,IMG_M,IMG_C,IMG_DB registry
