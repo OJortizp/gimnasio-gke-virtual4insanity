@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: virtual4insanity
+  labels:
+    app.kubernetes.io/part-of: gimnasio
+    app.kubernetes.io/managed-by: kubectl
