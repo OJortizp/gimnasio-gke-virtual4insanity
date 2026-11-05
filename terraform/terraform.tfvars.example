@@ -1,0 +1,10 @@
+# Copiar este archivo como terraform.tfvars y poner el ID real del proyecto.
+# El terraform.tfvars real NO se sube al repositorio (está en .gitignore).
+
+project_id = "ID-DE-SU-PROYECTO"
+
+# Los demás valores ya tienen el default acordado en CONTRATO.md.
+# Solo se descomentan si el equipo decide cambiarlos:
+# zone         = "us-central1-a"
+# region       = "us-central1"
+# cluster_name = "gke-virtual4insanity"

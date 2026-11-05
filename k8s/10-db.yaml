@@ -1,0 +1,173 @@
+# Base de datos PostgreSQL · Rol 2 (ver CONTRATO.md, secciones 6, 8 y 9)
+# Contiene: PVC, script de inicio, Deployment y Service de db.
+
+# ---------- Disco persistente: los datos sobreviven aunque el pod se borre ----------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: db-pvc
+  namespace: virtual4insanity
+  labels:
+    app: db
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+# ---------- Script de inicio ----------
+# Copia de db/init.sql. Si cambia el script, regenerar con:
+#   kubectl create configmap db-init --from-file=init.sql=db/init.sql -n virtual4insanity --dry-run=client -o yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-init
+  namespace: virtual4insanity
+  labels:
+    app: db
+data:
+  init.sql: |
+    -- Base de datos del gimnasio · Proyecto Final Virtualización · Virtual Insanity
+    -- Corre solo la primera vez que el volumen de PostgreSQL está vacío.
+
+    -- ---------- Integrantes del equipo (criterio A4) ----------
+    CREATE TABLE integrantes (
+        carne   VARCHAR(10)  PRIMARY KEY,
+        nombre  VARCHAR(100) NOT NULL,
+        rol     VARCHAR(60)  NOT NULL
+    );
+
+    INSERT INTO integrantes (carne, nombre, rol) VALUES
+        ('1283220', 'Rochelle Giulianne Esquivel Vargas', 'Infraestructura como código'),
+        ('1182222', 'Oscar Javier Ortíz Pocón',           'Base de datos y Miembros'),
+        ('2528119', 'Diego Andrés Azurdia Ortíz',         'Clases programadas e imágenes'),
+        ('1163722', 'Diego Oswaldo Orellana Morales',     'Frontend y acceso público'),
+        ('1224323', 'Susana Paola García García',         'Kubernetes, operación y documentación');
+
+    -- ---------- Miembros (microservicio api-miembros) ----------
+    CREATE TABLE miembros (
+        id                 SERIAL       PRIMARY KEY,
+        nombre             VARCHAR(100) NOT NULL,
+        correo             VARCHAR(100) NOT NULL UNIQUE,
+        telefono           VARCHAR(20),
+        membresia          VARCHAR(20)  NOT NULL
+                           CHECK (membresia IN ('Mensual', 'Trimestral', 'Anual')),
+        fecha_inscripcion  DATE         NOT NULL DEFAULT CURRENT_DATE,
+        carne_registro     VARCHAR(10)  NOT NULL REFERENCES integrantes (carne)
+    );
+
+    -- ---------- Clases programadas (microservicio api-clases) ----------
+    -- miembro_id no tiene llave foránea: api-clases valida el miembro con api-miembros.
+    CREATE TABLE clases (
+        id              SERIAL       PRIMARY KEY,
+        nombre          VARCHAR(100) NOT NULL,
+        instructor      VARCHAR(100) NOT NULL,
+        fecha           DATE         NOT NULL,
+        hora            TIME         NOT NULL,
+        cupo            INTEGER      NOT NULL CHECK (cupo > 0),
+        miembro_id      INTEGER      NOT NULL,
+        carne_registro  VARCHAR(10)  NOT NULL REFERENCES integrantes (carne)
+    );
+
+    -- ---------- Datos de ejemplo ----------
+    INSERT INTO miembros (nombre, correo, telefono, membresia, carne_registro) VALUES
+        ('Ana López',     'ana.lopez@correo.com',   '5555-1234', 'Mensual',    '1182222'),
+        ('Luis Méndez',   'luis.mendez@correo.com', '5555-5678', 'Anual',      '1182222'),
+        ('María Castillo','maria.castillo@correo.com', NULL,     'Trimestral', '1182222');
+
+    INSERT INTO clases (nombre, instructor, fecha, hora, cupo, miembro_id, carne_registro) VALUES
+        ('Spinning', 'Carlos Pérez',  '2026-11-05', '18:30', 15, 1, '2528119'),
+        ('Yoga',     'Lucía Ramírez', '2026-11-06', '07:00', 20, 2, '2528119'),
+        ('CrossFit', 'Jorge Aguilar', '2026-11-07', '17:00', 12, 3, '2528119');
+---
+# ---------- Deployment de PostgreSQL ----------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db
+  namespace: virtual4insanity
+  labels:
+    app: db
+spec:
+  replicas: 1
+  # Recreate: el disco solo se conecta a un pod a la vez, así que el viejo se apaga antes de crear el nuevo
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app: db
+    spec:
+      containers:
+        - name: db
+          image: us-central1-docker.pkg.dev/PROJECT_ID/gimnasio/postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: gimnasio-config
+                  key: DB_NAME
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: gimnasio-secret
+                  key: DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: gimnasio-secret
+                  key: DB_PASSWORD
+            # Subcarpeta obligatoria: el disco de GKE trae una carpeta lost+found en la raíz
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: datos
+              mountPath: /var/lib/postgresql/data
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+      volumes:
+        - name: datos
+          persistentVolumeClaim:
+            claimName: db-pvc
+        - name: init
+          configMap:
+            name: db-init
+---
+# ---------- Service: los demás llegan a la base como db:5432 ----------
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+  namespace: virtual4insanity
+  labels:
+    app: db
+spec:
+  type: ClusterIP
+  selector:
+    app: db
+  ports:
+    - port: 5432
+      targetPort: 5432
