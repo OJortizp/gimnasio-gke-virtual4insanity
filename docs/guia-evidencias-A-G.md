@@ -14,7 +14,7 @@
 De acuerdo con la sección 6 (*Requisitos de admisión*, página 3 de `docs/Proyecto FInal GKE.pdf`), **toda captura de pantalla incluida en el informe PDF debe cumplir estrictamente con lo siguiente**:
 
 1. **Reloj del sistema visible:** La barra de tareas del sistema operativo (fecha y hora) debe aparecer completa y legible dentro del encuadre de la captura.
-2. **Salida de `gcloud config list` visible:** En toda captura (incluso cuando se muestre el navegador web o un visor de código, colocando una ventana de terminal al lado) debe apreciarse la ejecución de `gcloud config list` mostrando la cuenta activa y el identificador del proyecto (`project = <PROJECT_ID>`).
+2. **Salida de `gcloud config list` visible:** En toda captura (incluso cuando se muestre el navegador web o un visor de código, colocando una ventana de terminal al lado) debe apreciarse la ejecución de `gcloud config list` mostrando la cuenta activa y el identificador del proyecto (`project = <gimnasio-virtual4insanity>`).
 3. **Comandos y resultados completos y legibles:** Sin recortes que oculten el prompt, el comando ejecutado o el estado de los recursos.
 4. **Orden estricto A a G:** El PDF final debe presentar las evidencias exactamente en el orden de los **30 criterios** de la lista de cotejo del Anexo B (100 puntos = 5 puntos grupales).
 5. **Política de estados en esta guía:** Ningún criterio se marca como `Verificado` hasta contar con la captura real definitiva en `docs/evidencias/` que incluya `gcloud config list` y reloj del sistema. Los entregables cuyos archivos ya están listos en el repositorio se registran como `Preparado`, y los que dependen de infraestructura o despliegues en vivo como `Pendiente`.
@@ -78,7 +78,7 @@ De acuerdo con la sección 6 (*Requisitos de admisión*, página 3 de `docs/Proy
 8. **Descripción formal para el informe:**
    > **Figura A1.** Verificación del historial de control de versiones del repositorio Git del equipo `virtual4insanity` y estructura de directorios (`terraform/`, `k8s/`, `db/`, `services/` y `frontend/`), evidenciando más de 10 commits distribuidos en al menos 3 días distintos junto con la configuración activa de `gcloud`.
 9. **Estado:** `Preparado` (existen más de 12 commits en 4 días distintos; la captura final se toma cuando `terraform/` y `frontend/` estén integrados en `main`).
-10. **Dependencias necesarias para completar la prueba:** Integración en `main` de las ramas de los Roles 1, 2, 3, 4 y 5, y configuración de `gcloud config list` con el `<PROJECT_ID>`.
+10. **Dependencias necesarias para completar la prueba:** Integración en `main` de las ramas de los Roles 1, 2, 3, 4 y 5, y configuración de `gcloud config list` con el `<gimnasio-virtual4insanity>`.
 
 ---
 
@@ -98,7 +98,7 @@ De acuerdo con la sección 6 (*Requisitos de admisión*, página 3 de `docs/Proy
 8. **Descripción formal para el informe:**
    > **Figura A2.** Documento `README.md` principal del repositorio mostrando la descripción del Caso 2 (Sistema de Gestión de Gimnasio), la nómina oficial de los cinco integrantes con su número de carné y el índice completo de instrucciones de despliegue y operación en GKE.
 9. **Estado:** `Preparado` (`README.md` ya fue completado en el commit `429d18a`; falta únicamente tomar la captura con `gcloud config list` activo).
-10. **Dependencias necesarias para completar la prueba:** Tener `gcloud config list` configurado con el `<PROJECT_ID>` real.
+10. **Dependencias necesarias para completar la prueba:** Tener `gcloud config list` configurado con el `<gimnasio-virtual4insanity>` real.
 
 ---
 
@@ -117,7 +117,7 @@ De acuerdo con la sección 6 (*Requisitos de admisión*, página 3 de `docs/Proy
 8. **Descripción formal para el informe:**
    > **Figura A3.** Diagrama de arquitectura propio del sistema distribuido de gestión de gimnasio en GKE (`gke-virtual4insanity`, namespace `virtual4insanity`), identificando el punto de entrada público (`LoadBalancer` puerto 80), el frontend web con proxy inverso Nginx, los microservicios `api-miembros` y `api-clases` (`ClusterIP` puerto 5000), la base de datos PostgreSQL (`ClusterIP` puerto 5432 con `db-pvc`) y Artifact Registry.
 9. **Estado:** `Preparado` (`docs/arquitectura.png` y `docs/arquitectura.mmd` creados en el commit `19bd92e`).
-10. **Dependencias necesarias para completar la prueba:** Tener `gcloud config list` configurado con el `<PROJECT_ID>` para la captura acompañada del reloj.
+10. **Dependencias necesarias para completar la prueba:** Tener `gcloud config list` configurado con el `<gimnasio-virtual4insanity>` para la captura acompañada del reloj.
 
 ---
 
@@ -226,15 +226,15 @@ De acuerdo con la sección 6 (*Requisitos de admisión*, página 3 de `docs/Proy
    gcloud config list
    cat services/miembros/Dockerfile
    cat services/clases/Dockerfile
-   docker build -t us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/api-miembros:v1 ./services/miembros
-   docker build -t us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/api-clases:v1 ./services/clases
+   docker build -t us-central1-docker.pkg.dev/<gimnasio-virtual4insanity>/gimnasio/api-miembros:v1 ./services/miembros
+   docker build -t us-central1-docker.pkg.dev/<gimnasio-virtual4insanity>/gimnasio/api-clases:v1 ./services/clases
    ```
 6. **Lugar exacto donde tomar la captura:** Terminal mostrando el contenido de ambos `Dockerfile` y la salida exitosa de `docker build` para cada microservicio independiente, con `gcloud config list` y reloj del sistema.
 7. **Nombre recomendado para guardar la imagen:** `docs/evidencias/B3-dockerfiles-microservicios.png`
 8. **Descripción formal para el informe:**
    > **Figura B3.** Archivos `Dockerfile` independientes de `services/miembros/` y `services/clases/` basados en `python:3.12-slim` y Gunicorn, junto con la construcción exitosa de ambos contenedores de forma aislada.
 9. **Estado:** `Preparado` (ambos `Dockerfile` ya están escritos; falta captura de construcción con `gcloud config list`).
-10. **Dependencias necesarias para completar la prueba:** Integrar `feature/api-clases` en `develop` y contar con el `<PROJECT_ID>` configurado en `gcloud`.
+10. **Dependencias necesarias para completar la prueba:** Integrar `feature/api-clases` en `develop` y contar con el `<gimnasio-virtual4insanity>` configurado en `gcloud`.
 
 ---
 
@@ -261,7 +261,7 @@ De acuerdo con la sección 6 (*Requisitos de admisión*, página 3 de `docs/Proy
 1. **Código y nombre exacto del criterio:** `C1` — Etiqueta las imágenes de frontend y de ambos microservicios con la ruta completa del repositorio de Artifact Registry.
 2. **Puntaje correspondiente:** 4 puntos.
 3. **Integrante responsable:** Diego Andrés Azurdia Ortíz (`2528119` · Rol 3), en coordinación con Rol 2 y Rol 4.
-4. **Objetivo de la evidencia:** Demostrar que las imágenes locales fueron etiquetadas con el prefijo completo `us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/<imagen>:v1` (sin usar `latest`).
+4. **Objetivo de la evidencia:** Demostrar que las imágenes locales fueron etiquetadas con el prefijo completo `us-central1-docker.pkg.dev/<gimnasio-virtual4insanity>/gimnasio/<imagen>:v1` (sin usar `latest`).
 5. **Comandos o procedimiento para verificar el requisito:**
    ```bash
    gcloud config list
@@ -272,7 +272,7 @@ De acuerdo con la sección 6 (*Requisitos de admisión*, página 3 de `docs/Proy
 8. **Descripción formal para el informe:**
    > **Figura C1.** Etiquetado de las imágenes de contenedores (`frontend:v1`, `api-miembros:v1`, `api-clases:v1` y `postgres:16-alpine`) utilizando la ruta completa del repositorio `gimnasio` en Google Artifact Registry (`us-central1`).
 9. **Estado:** `Pendiente`.
-10. **Dependencias necesarias para completar la prueba:** Proyecto GCP activo (`<PROJECT_ID>`) y `frontend/Dockerfile` entregado por el Rol 4.
+10. **Dependencias necesarias para completar la prueba:** Proyecto GCP activo (`<gimnasio-virtual4insanity>`) y `frontend/Dockerfile` entregado por el Rol 4.
 
 ---
 
@@ -284,7 +284,7 @@ De acuerdo con la sección 6 (*Requisitos de admisión*, página 3 de `docs/Proy
 5. **Comandos o procedimiento para verificar el requisito:**
    ```bash
    gcloud config list
-   gcloud artifacts docker images list us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio --include-tags
+   gcloud artifacts docker images list us-central1-docker.pkg.dev/<gimnasio-virtual4insanity>/gimnasio --include-tags
    ```
 6. **Lugar exacto donde tomar la captura:** Terminal mostrando la salida de `gcloud artifacts docker images list` con las imágenes y sus tags `v1` (`v2` y `16-alpine`), junto con `gcloud config list` y reloj del sistema.
 7. **Nombre recomendado para guardar la imagen:** `docs/evidencias/C2-listado-artifact-registry.png`
@@ -299,7 +299,7 @@ De acuerdo con la sección 6 (*Requisitos de admisión*, página 3 de `docs/Proy
 1. **Código y nombre exacto del criterio:** `C3` — Referencia en los manifiestos únicamente imágenes alojadas en Artifact Registry.
 2. **Puntaje correspondiente:** 3 puntos.
 3. **Integrante responsable:** Diego Andrés Azurdia Ortíz (`2528119` · Rol 3) y Susana Paola García García (`1224323` · Rol 5).
-4. **Objetivo de la evidencia:** Demostrar que todos los campos `image:` dentro de `k8s/*.yaml` apuntan exclusivamente a `us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/...` (incluyendo PostgreSQL).
+4. **Objetivo de la evidencia:** Demostrar que todos los campos `image:` dentro de `k8s/*.yaml` apuntan exclusivamente a `us-central1-docker.pkg.dev/<gimnasio-virtual4insanity>/gimnasio/...` (incluyendo PostgreSQL).
 5. **Comandos o procedimiento para verificar el requisito:**
    ```bash
    gcloud config list
@@ -311,7 +311,7 @@ De acuerdo con la sección 6 (*Requisitos de admisión*, página 3 de `docs/Proy
 8. **Descripción formal para el informe:**
    > **Figura C3.** Verificación de los manifiestos YAML en `k8s/` y de los pods en ejecución, comprobando que la totalidad de los contenedores (`db`, `api-miembros`, `api-clases` y `frontend`) utilizan únicamente imágenes alojadas en Artifact Registry con versiones explícitas.
 9. **Estado:** `Pendiente`.
-10. **Dependencias necesarias para completar la prueba:** Manifiestos `30-api-clases.yaml` (Rol 3) y `40-frontend.yaml` (Rol 4) completados y `<PROJECT_ID>` actualizado en `k8s/*.yaml`.
+10. **Dependencias necesarias para completar la prueba:** Manifiestos `30-api-clases.yaml` (Rol 3) y `40-frontend.yaml` (Rol 4) completados y `<gimnasio-virtual4insanity>` actualizado en `k8s/*.yaml`.
 
 ---
 
@@ -341,7 +341,7 @@ De acuerdo con la sección 6 (*Requisitos de admisión*, página 3 de `docs/Proy
 1. **Código y nombre exacto del criterio:** `D2` — Parametriza con variables el identificador de proyecto, la zona y el nombre del clúster, sin valores sensibles escritos en el código.
 2. **Puntaje correspondiente:** 4 puntos.
 3. **Integrante responsable:** Rochelle Giulianne Esquivel Vargas (`1283220` · Rol 1).
-4. **Objetivo de la evidencia:** Demostrar en `terraform/variables.tf` y `terraform/terraform.tfvars.example` la parametrización de `project_id`, `region`/`zone` y `cluster_name`, y que `.gitignore` excluye `*.tfvars` y credenciales JSON.
+4. **Objetivo de la evidencia:** Demostrar en `terraform/variables.tf` y `terraform/terraform.tfvars.example` la parametrización de `gimnasio-virtual4insanity`, `region`/`zone` y `cluster_name`, y que `.gitignore` excluye `*.tfvars` y credenciales JSON.
 5. **Comandos o procedimiento para verificar el requisito:**
    ```bash
    gcloud config list
@@ -653,7 +653,7 @@ De acuerdo con la sección 6 (*Requisitos de admisión*, página 3 de `docs/Proy
 8. **Descripción formal para el informe:**
    > **Figura G1.** Estimación preventiva del costo mensual de la infraestructura declarada en la región `us-central1` (`docs/estimacion-costo.md`), elaborada y versionada antes del despliegue (USD 50.26/mes para 730 horas continuas y USD 2.83 para 40 horas de operación efectiva).
 9. **Estado:** `Preparado` (documento `docs/estimacion-costo.md` creado en el commit `b763229` el 2 de noviembre de 2026; falta únicamente tomar la captura con `gcloud config list`).
-10. **Dependencias necesarias para completar la prueba:** Tener `gcloud config list` configurado con el `<PROJECT_ID>` real.
+10. **Dependencias necesarias para completar la prueba:** Tener `gcloud config list` configurado con el `<gimnasio-virtual4insanity>` real.
 
 ---
 
@@ -684,7 +684,7 @@ De acuerdo con la sección 6 (*Requisitos de admisión*, página 3 de `docs/Proy
 3. **Integrante responsable:** Rochelle Giulianne Esquivel Vargas (`1283220` · Rol 1).
 4. **Objetivo de la evidencia:** Mostrar el panel de Facturación (*Billing*) de Google Cloud Console correspondiente al proyecto del equipo con el desglose del gasto final incurrido.
 5. **Comandos o procedimiento para verificar el requisito:**
-   - Abrir en Google Cloud Console la sección **Facturación > Informes (Billing > Reports)** filtrada por el proyecto `<PROJECT_ID>`.
+   - Abrir en Google Cloud Console la sección **Facturación > Informes (Billing > Reports)** filtrada por el proyecto `<gimnasio-virtual4insanity>`.
    - Colocar al lado una ventana de terminal con la salida de `gcloud config list`.
 6. **Lugar exacto donde tomar la captura:** Pantalla mostrando el panel de facturación de Google Cloud Console con el costo total acumulado del proyecto, junto con la ventana de terminal mostrando `gcloud config list` y el reloj del sistema.
 7. **Nombre recomendado para guardar la imagen:** `docs/evidencias/G3-panel-facturacion.png`
@@ -701,10 +701,10 @@ Antes de generar el archivo PDF definitivo para el portal (fecha límite de entr
 
 - [ ] **1. Secuencia completa A–G:** El documento contiene exactamente las secciones **A (A1–A5), B (B1–B4), C (C1–C3), D (D1–D5), E (E1–E6), F (F1–F4) y G (G1–G3)** en orden estricto sin saltar ningún código.
 - [ ] **2. Reloj del sistema en el 100 % de las capturas:** Todas y cada una de las imágenes muestran claramente la fecha y hora del sistema operativo.
-- [ ] **3. Salida de `gcloud config list` en el 100 % de las capturas:** En todas las capturas es legible la salida de `gcloud config list` con el identificador real del proyecto (`<PROJECT_ID>`).
+- [ ] **3. Salida de `gcloud config list` en el 100 % de las capturas:** En todas las capturas es legible la salida de `gcloud config list` con el identificador real del proyecto (`<gimnasio-virtual4insanity>`).
 - [ ] **4. Diagrama de arquitectura incluido:** El diagrama `docs/arquitectura.png` está integrado tanto en el `README.md` del repositorio como en la sección **A3** del PDF de evidencias en alta resolución.
 - [ ] **5. Los 5 carnés visibles en BD e interfaz (A4):** En la captura de **A4** se distinguen claramente los carnés `1283220`, `1182222`, `2528119`, `1163722` y `1224323`.
 - [ ] **6. Nombres oficiales exactos (A5, E1–E6):** Todas las salidas de terminal muestran el clúster `gke-virtual4insanity`, el namespace `virtual4insanity`, los Services `db`, `api-miembros`, `api-clases` y `frontend`, el ConfigMap `gimnasio-config`, el Secret `gimnasio-secret` y el PVC `db-pvc`.
-- [ ] **7. Cero uso del tag `latest` (C1–C3):** Ningún manifiesto ni imagen en las capturas utiliza `:latest`; todas provienen de `us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/...`.
+- [ ] **7. Cero uso del tag `latest` (C1–C3):** Ningún manifiesto ni imagen en las capturas utiliza `:latest`; todas provienen de `us-central1-docker.pkg.dev/<gimnasio-virtual4insanity>/gimnasio/...`.
 - [ ] **8. Estimación de costos previa al despliegue (G1):** La sección **G1** incluye la tabla de costos de `docs/estimacion-costo.md` con fecha anterior al `terraform apply`.
 - [ ] **9. Legibilidad del PDF exportado:** Al abrir el PDF al 100 % de zoom, ningún texto de consola o navegador aparece pixelado o cortado.

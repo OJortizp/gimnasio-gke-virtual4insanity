@@ -11,10 +11,10 @@ flowchart TB
     subgraph GCP["Google Cloud Platform · Región: us-central1"]
 
         subgraph AR["Artifact Registry · Repositorio Docker: gimnasio (us-central1)"]
-            IMG_FE["Imagen: frontend:v1<br/>us-central1-docker.pkg.dev/PROJECT_ID/gimnasio/frontend:v1"]
-            IMG_M["Imagen: api-miembros:v1<br/>us-central1-docker.pkg.dev/PROJECT_ID/gimnasio/api-miembros:v1"]
-            IMG_C["Imagen: api-clases:v1 / v2<br/>us-central1-docker.pkg.dev/PROJECT_ID/gimnasio/api-clases:v1"]
-            IMG_DB["Imagen: postgres:16-alpine<br/>us-central1-docker.pkg.dev/PROJECT_ID/gimnasio/postgres:16-alpine"]
+            IMG_FE["Imagen: frontend:v1<br/>us-central1-docker.pkg.dev/gimnasio-virtual4insanity/gimnasio/frontend:v1"]
+            IMG_M["Imagen: api-miembros:v1<br/>us-central1-docker.pkg.dev/gimnasio-virtual4insanity/gimnasio/api-miembros:v1"]
+            IMG_C["Imagen: api-clases:v1 / v2<br/>us-central1-docker.pkg.dev/gimnasio-virtual4insanity/gimnasio/api-clases:v1"]
+            IMG_DB["Imagen: postgres:16-alpine<br/>us-central1-docker.pkg.dev/gimnasio-virtual4insanity/gimnasio/postgres:16-alpine"]
         end
 
         subgraph GKE["Clúster GKE Standard Zonal: gke-virtual4insanity · Zona: us-central1-a (Node Pool: 2 nodos e2-small Spot)"]
