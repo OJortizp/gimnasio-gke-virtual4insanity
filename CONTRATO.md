@@ -36,12 +36,12 @@ Nunca se usa la IP de un pod, porque cambia cada vez que el pod se recrea.
 
 | Imagen | Ruta completa | Dueño |
 | --- | --- | --- |
-| Frontend | `us-central1-docker.pkg.dev/<gimnasio-virtual4insanity>/gimnasio/frontend:<tag>` | Rol 4 |
-| Miembros | `us-central1-docker.pkg.dev/<gimnasio-virtual4insanity>/gimnasio/api-miembros:<tag>` | Rol 2 |
-| Clases | `us-central1-docker.pkg.dev/<gimnasio-virtual4insanity>/gimnasio/api-clases:<tag>` | Rol 3 |
-| Base de datos | `us-central1-docker.pkg.dev/<gimnasio-virtual4insanity>/gimnasio/postgres:16-alpine` | Rol 3 |
+| Frontend | `us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/frontend:<tag>` | Rol 4 |
+| Miembros | `us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/api-miembros:<tag>` | Rol 2 |
+| Clases | `us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/api-clases:<tag>` | Rol 3 |
+| Base de datos | `us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/postgres:16-alpine` | Rol 3 |
 
-- `<gimnasio-virtual4insanity>` es el ID del proyecto de Google Cloud que crea el Rol 1.
+- `<PROJECT_ID>` es el ID del proyecto de Google Cloud que crea el Rol 1.
 - La primera versión de nuestras imágenes es `v1`. Para el rolling update se publica `v2`.
 - Nunca se usa el tag `latest`.
 - La base usa la imagen oficial `postgres:16-alpine`, pero el Rol 3 la copia a nuestro repositorio de Artifact Registry. El criterio C3 pide que los manifiestos solo usen imágenes de Artifact Registry, y eso incluye la de la base.

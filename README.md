@@ -57,7 +57,7 @@ El sistema se ejecuta dentro de Google Cloud Platform en la región **`us-centra
 | **Frontend (`frontend`)** | Vue 3 con Vite, servido por Nginx en contenedor ligero (puerto 80) |
 | **Base de datos (`db`)** | PostgreSQL 16 (`postgres:16-alpine`), base `gimnasio` con tablas `integrantes`, `miembros` y `clases` |
 | **Orquestación** | Kubernetes en Google Kubernetes Engine (GKE Standard zonal) |
-| **Infraestructura y Registro** | Terraform (IaC) y Google Artifact Registry (`us-central1-docker.pkg.dev/<gimnasio-virtual4insanity>/gimnasio`) |
+| **Infraestructura y Registro** | Terraform (IaC) y Google Artifact Registry (`us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio`) |
 
 ---
 
@@ -99,11 +99,11 @@ Antes de ejecutar el despliegue, verifique contar con las siguientes herramienta
 
 ## 8. Configuración inicial de Google Cloud (Pre-vuelo)
 
-1. Autenticarse en Google Cloud y configurar el proyecto activo (reemplazar `<gimnasio-virtual4insanity>` por el identificador real del proyecto provisto por el Rol 1):
+1. Autenticarse en Google Cloud y configurar el proyecto activo (reemplazar `<PROJECT_ID>` por el identificador real del proyecto provisto por el Rol 1):
 
 ```bash
 gcloud auth login
-gcloud config set project <gimnasio-virtual4insanity>
+gcloud config set project <PROJECT_ID>
 gcloud config set compute/region us-central1
 gcloud config set compute/zone us-central1-a
 ```
@@ -142,7 +142,7 @@ cp terraform.tfvars.example terraform.tfvars
 ```
 
 2. Confirmar en `terraform.tfvars` los valores acordados en [CONTRATO.md](CONTRATO.md):
-   - Identificador del proyecto: `<gimnasio-virtual4insanity>`
+   - Identificador del proyecto: `<PROJECT_ID>`
    - Región / Zona: `us-central1` / `us-central1-a`
    - Nombre del clúster: `gke-virtual4insanity`
    - Repositorio de Artifact Registry: `gimnasio`
@@ -165,7 +165,7 @@ terraform apply
 
 ```bash
 cd ..
-gcloud container clusters get-credentials gke-virtual4insanity --zone us-central1-a --project <gimnasio-virtual4insanity>
+gcloud container clusters get-credentials gke-virtual4insanity --zone us-central1-a --project <PROJECT_ID>
 kubectl get nodes -o wide
 ```
 
@@ -173,7 +173,7 @@ kubectl get nodes -o wide
 
 ## 10. Construcción y publicación de imágenes en Artifact Registry (Criterios C1–C3)
 
-Según la sección 3 de [CONTRATO.md](CONTRATO.md), **todos los manifiestos de Kubernetes referencian exclusivamente imágenes alojadas en Artifact Registry** bajo la ruta `us-central1-docker.pkg.dev/<gimnasio-virtual4insanity>/gimnasio/<imagen>:<tag>` y **nunca se utiliza el tag `latest`**.
+Según la sección 3 de [CONTRATO.md](CONTRATO.md), **todos los manifiestos de Kubernetes referencian exclusivamente imágenes alojadas en Artifact Registry** bajo la ruta `us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/<imagen>:<tag>` y **nunca se utiliza el tag `latest`**.
 
 1. Configurar Docker para autenticarse contra el registro de `us-central1`:
 
@@ -186,37 +186,37 @@ gcloud auth configure-docker us-central1-docker.pkg.dev
 
 ```bash
 docker pull postgres:16-alpine
-docker tag postgres:16-alpine us-central1-docker.pkg.dev/<gimnasio-virtual4insanity>/gimnasio/postgres:16-alpine
-docker push us-central1-docker.pkg.dev/<gimnasio-virtual4insanity>/gimnasio/postgres:16-alpine
+docker tag postgres:16-alpine us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/postgres:16-alpine
+docker push us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/postgres:16-alpine
 ```
 
 3. **Imagen del Microservicio Miembros (`api-miembros:v1` — Rol 2):**
 
 ```bash
-docker build -t us-central1-docker.pkg.dev/<gimnasio-virtual4insanity>/gimnasio/api-miembros:v1 ./services/miembros
-docker push us-central1-docker.pkg.dev/<gimnasio-virtual4insanity>/gimnasio/api-miembros:v1
+docker build -t us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/api-miembros:v1 ./services/miembros
+docker push us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/api-miembros:v1
 ```
 
 4. **Imagen del Microservicio Clases (`api-clases:v1` y `v2` para Rolling Update — Rol 3):**
    *(Pendiente de merge de `feature/api-clases` a `develop`)*
 
 ```bash
-docker build -t us-central1-docker.pkg.dev/<gimnasio-virtual4insanity>/gimnasio/api-clases:v1 ./services/clases
-docker push us-central1-docker.pkg.dev/<gimnasio-virtual4insanity>/gimnasio/api-clases:v1
+docker build -t us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/api-clases:v1 ./services/clases
+docker push us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/api-clases:v1
 ```
 
 5. **Imagen del Frontend (`frontend:v1` — Rol 4):**
    *(Pendiente de entrega de `frontend/Dockerfile` por el Rol 4)*
 
 ```bash
-docker build -t us-central1-docker.pkg.dev/<gimnasio-virtual4insanity>/gimnasio/frontend:v1 ./frontend
-docker push us-central1-docker.pkg.dev/<gimnasio-virtual4insanity>/gimnasio/frontend:v1
+docker build -t us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/frontend:v1 ./frontend
+docker push us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/frontend:v1
 ```
 
 6. Verificar el listado de imágenes publicadas en el repositorio (**Criterio C2**):
 
 ```bash
-gcloud artifacts docker images list us-central1-docker.pkg.dev/<gimnasio-virtual4insanity>/gimnasio --include-tags
+gcloud artifacts docker images list us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio --include-tags
 ```
 
 ---
@@ -251,8 +251,8 @@ cp k8s/secret.example.yaml k8s/secret.yaml
    - `MIEMBROS_URL`: `http://api-miembros:5000`
    - `EQUIPO`: `virtual4insanity`
 
-3. **Actualización del `<gimnasio-virtual4insanity>` en los manifiestos de Deployment:**
-   Antes de aplicar los manifiestos, asegúrese de que el placeholder `gimnasio-virtual4insanity` en las rutas `image: us-central1-docker.pkg.dev/gimnasio-virtual4insanity/gimnasio/...` dentro de `k8s/10-db.yaml`, `k8s/20-api-miembros.yaml`, `k8s/30-api-clases.yaml` y `k8s/40-frontend.yaml` corresponda al identificador real del proyecto de Google Cloud.
+3. **Actualización del `<PROJECT_ID>` en los manifiestos de Deployment:**
+   Antes de aplicar los manifiestos, asegúrese de que el placeholder `PROJECT_ID` en las rutas `image: us-central1-docker.pkg.dev/PROJECT_ID/gimnasio/...` dentro de `k8s/10-db.yaml`, `k8s/20-api-miembros.yaml`, `k8s/30-api-clases.yaml` y `k8s/40-frontend.yaml` corresponda al identificador real del proyecto de Google Cloud.
 
 ---
 
