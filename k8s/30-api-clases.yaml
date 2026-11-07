@@ -17,8 +17,7 @@ spec:
     spec:
       containers:
         - name: api-clases
-          # Reemplazar <PROJECT_ID> con el ID real del proyecto cuando Rol 1 lo comparta
-          image: us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/api-clases:v1
+          image: us-central1-docker.pkg.dev/gimnasio-virtual4insanity/gimnasio/api-clases:v1
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5000
