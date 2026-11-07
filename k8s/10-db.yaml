@@ -104,7 +104,7 @@ spec:
     spec:
       containers:
         - name: db
-          image: us-central1-docker.pkg.dev/PROJECT_ID/gimnasio/postgres:16-alpine
+          image: us-central1-docker.pkg.dev/gimnasio-virtual4insanity/gimnasio/postgres:16-alpine
           ports:
             - containerPort: 5432
           env:

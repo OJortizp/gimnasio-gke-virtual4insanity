@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: api-miembros
-          image: us-central1-docker.pkg.dev/PROJECT_ID/gimnasio/api-miembros:v1
+          image: us-central1-docker.pkg.dev/gimnasio-virtual4insanity/gimnasio/api-miembros:v1
           ports:
             - containerPort: 5000
           # DB_HOST, DB_PORT y DB_NAME salen del ConfigMap; DB_USER y DB_PASSWORD del Secret
