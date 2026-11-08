@@ -36,12 +36,12 @@ spec:
             - secretRef:
                 name: gimnasio-secret
           # Verificación de salud del pod
+          # Vivo si el proceso responde; no depende de la base, para no reiniciarlo si la base se cae
           livenessProbe:
-            httpGet:
-              path: /api/clases/health
+            tcpSocket:
               port: 5000
             initialDelaySeconds: 15
-            periodSeconds: 10
+            periodSeconds: 20
           readinessProbe:
             httpGet:
               path: /api/clases/health

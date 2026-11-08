@@ -1,0 +1,13 @@
+# Configuración no sensible compartida · Rol 4 (ver CONTRATO.md, sección 8)
+# La usan db (DB_NAME), api-miembros y api-clases (DB_HOST, DB_PORT, DB_NAME) y api-clases (MIEMBROS_URL).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gimnasio-config
+  namespace: virtual4insanity
+data:
+  DB_HOST: "db"
+  DB_PORT: "5432"
+  DB_NAME: "gimnasio"
+  MIEMBROS_URL: "http://api-miembros:5000"
+  EQUIPO: "virtual4insanity"

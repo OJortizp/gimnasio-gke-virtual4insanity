@@ -1,5 +1,8 @@
 import os
 import requests
+import psycopg2
+from psycopg2 import errors
+from datetime import datetime
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 from database import get_db_connection, check_db_health
@@ -31,6 +34,16 @@ def validar_miembro_existe(miembro_id):
         raise Exception(f"No se pudo contactar a api-miembros: {str(e)}")
 
 
+def validar_fecha_hora(data):
+    """Exige fecha AAAA-MM-DD y hora HH:MM, como dice el contrato."""
+    try:
+        datetime.strptime(str(data["fecha"]), "%Y-%m-%d")
+        datetime.strptime(str(data["hora"]), "%H:%M")
+        return None
+    except ValueError:
+        return "La fecha debe tener formato AAAA-MM-DD y la hora HH:MM"
+
+
 def formatear_registro(registro):
     """Convierte tipos DATE y TIME a strings según el contrato (YYYY-MM-DD y HH:MM)"""
     if not registro:
@@ -56,6 +69,8 @@ def health():
 @app.route("/api/clases", methods=["GET"])
 def listar_clases():
     miembro_id = request.args.get("miembro_id")
+    if miembro_id is not None and not miembro_id.isdigit():
+        return jsonify({"error": "miembro_id debe ser un número"}), 400
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -108,8 +123,12 @@ def crear_clase():
         cupo = int(data["cupo"])
         if cupo <= 0:
             return jsonify({"error": "El cupo debe ser mayor que 0"}), 400
-    except ValueError:
+    except (ValueError, TypeError):
         return jsonify({"error": "El cupo debe ser un número entero"}), 400
+
+    error_formato = validar_fecha_hora(data)
+    if error_formato:
+        return jsonify({"error": error_formato}), 400
 
     miembro_id = data["miembro_id"]
 
@@ -145,6 +164,10 @@ def crear_clase():
         conn.close()
 
         return jsonify(formatear_registro(nueva_clase)), 201
+    except errors.ForeignKeyViolation:
+        return jsonify({"error": f"El carné {data['carne_registro']} no pertenece al equipo"}), 400
+    except psycopg2.DataError:
+        return jsonify({"error": "Algún dato no tiene el formato correcto"}), 400
     except Exception as e:
         return jsonify({"error": f"Error al guardar la clase: {str(e)}"}), 500
 
@@ -163,8 +186,12 @@ def actualizar_clase(id):
         cupo = int(data["cupo"])
         if cupo <= 0:
             return jsonify({"error": "El cupo debe ser mayor que 0"}), 400
-    except ValueError:
+    except (ValueError, TypeError):
         return jsonify({"error": "El cupo debe ser un número entero"}), 400
+
+    error_formato = validar_fecha_hora(data)
+    if error_formato:
+        return jsonify({"error": error_formato}), 400
 
     miembro_id = data["miembro_id"]
 
@@ -208,6 +235,10 @@ def actualizar_clase(id):
         conn.close()
 
         return jsonify(formatear_registro(clase_actualizada)), 200
+    except errors.ForeignKeyViolation:
+        return jsonify({"error": f"El carné {data['carne_registro']} no pertenece al equipo"}), 400
+    except psycopg2.DataError:
+        return jsonify({"error": "Algún dato no tiene el formato correcto"}), 400
     except Exception as e:
         return jsonify({"error": f"Error al actualizar la clase: {str(e)}"}), 500
 

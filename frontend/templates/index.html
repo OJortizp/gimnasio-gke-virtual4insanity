@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gimnasio - Panel Principal</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-dark: #0b132b;
+            --secondary-dark: #1c2541;
+            --accent-blue: #3a506b;
+            --light-bg: #e0f2fe; /* Fondo azul claro */
+        }
+
+        body {
+            background-color: var(--light-bg);
+            color: #1e293b;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* Navbar estilo Azul Oscuro */
+        .navbar-custom {
+            background-color: var(--primary-dark) !important;
+            border-bottom: 3px solid #38bdf8;
+        }
+
+        /* Tarjetas */
+        .card-custom {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(11, 19, 43, 0.1);
+            overflow: hidden;
+        }
+
+        .card-header-custom {
+            background-color: var(--secondary-dark) !important;
+            color: white !important;
+            font-weight: 600;
+            border-bottom: none;
+            padding: 1rem 1.25rem;
+        }
+
+        /* Tarjetas individuales de los integrantes */
+        .integrante-card {
+            background: linear-gradient(135deg, var(--secondary-dark), var(--accent-blue));
+            color: white;
+            border-radius: 10px;
+            transition: transform 0.2s ease;
+        }
+
+        .integrante-card:hover {
+            transform: translateY(-3px);
+        }
+
+        /* Tablas */
+        .table thead {
+            background-color: var(--secondary-dark);
+            color: white;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: rgba(56, 189, 248, 0.15);
+        }
+
+        /* Insignias */
+        .badge-rol {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Barra de Navegación -->
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom mb-4 shadow">
+        <div class="container">
+            <a class="navbar-brand fw-bold fs-4 text-white" href="#">
+                Sistema de Gestión - Gimnasio | <span class="text-info">virtual4insanity</span>
+            </a>
+            <span class="badge bg-light text-dark px-3 py-2 fw-semibold">Rol 4 - Frontend</span>
+        </div>
+    </nav>
+
+    <div class="container pb-5">
+        
+        <!-- Alerta de Error (si ocurre) -->
+        {% if error %}
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+            <strong>Atención:</strong> {{ error }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+
+        <!-- SECCIÓN: CARNÉS DEL EQUIPO (Criterio A4) -->
+        <div class="card card-custom mb-4">
+            <div class="card-header card-header-custom d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 text-white">Integrantes del Equipo y Carnés (Criterio A4)</h5>
+            </div>
+            <div class="card-body bg-white p-4">
+                <div class="row g-3">
+                    {% for integrante in integrantes %}
+                    <div class="col-lg-auto col-md-4 col-sm-6 flex-grow-1">
+                        <div class="p-3 integrante-card h-100 shadow-sm">
+                            <h6 class="fw-bold mb-1 text-white">{{ integrante.nombre }}</h6>
+                            <p class="mb-2 text-info fw-semibold font-monospace">Carné: {{ integrante.carne }}</p>
+                            <span class="badge badge-rol px-2 py-1">{{ integrante.rol }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN DE DATOS (MIEMBROS Y CLASES) -->
+        <div class="row g-4">
+            
+            <!-- MIEMBROS -->
+            <div class="col-lg-6">
+                <div class="card card-custom h-100">
+                    <div class="card-header card-header-custom">
+                        <h5 class="mb-0 text-white">Miembros Registrados</h5>
+                    </div>
+                    <div class="card-body bg-white p-3">
+                        {% if miembros %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nombre</th>
+                                        <th>Correo</th>
+                                        <th>Membresía</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for m in miembros %}
+                                    <tr>
+                                        <td><span class="badge bg-secondary">{{ m.id }}</span></td>
+                                        <td class="fw-semibold text-dark">{{ m.nombre }}</td>
+                                        <td class="text-muted small">{{ m.correo }}</td>
+                                        <td>
+                                            <span class="badge bg-dark text-white">{{ m.membresia if m.membresia else m.tipo_membresia }}</span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <p class="mb-0">No se encontraron registros de miembros.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- CLASES PROGRAMADAS -->
+            <div class="col-lg-6">
+                <div class="card card-custom h-100">
+                    <div class="card-header card-header-custom">
+                        <h5 class="mb-0 text-white">Clases Programadas</h5>
+                    </div>
+                    <div class="card-body bg-white p-3">
+                        {% if clases %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Clase</th>
+                                        <th>Instructor</th>
+                                        <th>Horario</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for c in clases %}
+                                    <tr>
+                                        <td><span class="badge bg-secondary">{{ c.id }}</span></td>
+                                        <td class="fw-semibold text-dark">{{ c.nombre }}</td>
+                                        <td class="text-muted">{{ c.instructor }}</td>
+                                        <td><small class="fw-semibold text-dark">{{ c.fecha }} {{ c.hora }}</small></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <p class="mb-0">No hay clases programadas disponibles.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
