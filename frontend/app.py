@@ -1,6 +1,6 @@
 import os
 import requests
-from flask import Flask, render_template
+from flask import Flask, Response, jsonify, render_template, request
 
 app = Flask(__name__)
 
@@ -48,6 +48,33 @@ def index():
         integrantes=integrantes, 
         error=error_msg
     )
+
+
+# Reenvía /api/miembros/... y /api/clases/... al microservicio correspondiente por su nombre DNS.
+# Así el navegador solo conoce la IP pública del frontend (CONTRATO.md, sección 5).
+SERVICIOS = {"miembros": MIEMBROS_URL, "clases": CLASES_URL}
+
+
+@app.route("/api/<servicio>", defaults={"resto": ""}, methods=["GET", "POST", "PUT", "DELETE"])
+@app.route("/api/<servicio>/<path:resto>", methods=["GET", "POST", "PUT", "DELETE"])
+def reenviar_api(servicio, resto):
+    base = SERVICIOS.get(servicio)
+    if not base:
+        return jsonify({"error": "La ruta no existe"}), 404
+    url = f"{base}/api/{servicio}" + (f"/{resto}" if resto else "")
+    try:
+        r = requests.request(
+            request.method,
+            url,
+            params=request.args,
+            data=request.get_data(),
+            headers={"Content-Type": request.headers.get("Content-Type", "application/json")},
+            timeout=5,
+        )
+    except requests.RequestException:
+        return jsonify({"error": f"No se pudo contactar a api-{servicio}"}), 502
+    return Response(r.content, status=r.status_code, content_type=r.headers.get("Content-Type"))
+
 
 if __name__ == "__main__":
     # Solo para pruebas locales. En el contenedor arranca Gunicorn en el puerto 80.
