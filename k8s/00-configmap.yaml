@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gimnasio-config
+  namespace: virtual4insanity
+data:
+  # Aquí puedes colocar variables globales que utilicen los microservicios
+  ENVIRONMENT: "production"
+  PORT: "5000"

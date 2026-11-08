@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config-virtual4insanity  # Nombre único para no chocar con posibles configs de otros
+  namespace: virtual4insanity
+data:
+  MIEMBROS_URL: "http://api-miembros:5000"
+  CLASES_URL: "http://api-clases:5000"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-virtual4insanity        # Nombre aislado para tu despliegue
+  namespace: virtual4insanity
+  labels:
+    app: frontend-virtual4insanity
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend-virtual4insanity
+  template:
+    metadata:
+      labels:
+        app: frontend-virtual4insanity
+    spec:
+      containers:
+      - name: frontend
+        image: us-central1-docker.pkg.dev/gimnasio-virtual4insanity/gimnasio/frontend:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: MIEMBROS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-config-virtual4insanity
+              key: MIEMBROS_URL
+        - name: CLASES_URL
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-config-virtual4insanity
+              key: CLASES_URL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service-virtual4insanity # Servicio independiente
+  namespace: virtual4insanity
+  labels:
+    app: frontend-virtual4insanity
+spec:
+  type: LoadBalancer
+  selector:
+    app: frontend-virtual4insanity
+  ports:
+  - port: 80
+    targetPort: 80
