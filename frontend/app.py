@@ -4,9 +4,10 @@ from flask import Flask, render_template
 
 app = Flask(__name__)
 
-# Ajusta estos puertos según el puerto en el que corra cada microservicio de forma predeterminada
-MIEMBROS_URL = os.getenv("MIEMBROS_URL", "http://127.0.0.1:5000")
-CLASES_URL = os.getenv("CLASES_URL", "http://127.0.0.1:5001")
+# En Kubernetes llegan por ConfigMap con los nombres DNS de los Services (http://api-miembros:5000, http://api-clases:5000).
+# Los valores por defecto son para pruebas locales.
+MIEMBROS_URL = os.getenv("MIEMBROS_URL", "http://127.0.0.1:5001")
+CLASES_URL = os.getenv("CLASES_URL", "http://127.0.0.1:5002")
 
 @app.route("/")
 def index():
@@ -49,4 +50,5 @@ def index():
     )
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "80")), debug=True)
+    # Solo para pruebas locales. En el contenedor arranca Gunicorn en el puerto 80.
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "8080")))

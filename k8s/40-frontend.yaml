@@ -1,7 +1,10 @@
+# Frontend · Rol 4 (ver CONTRATO.md, secciones 2 y 5)
+# El frontend llama a los microservicios por el nombre DNS de sus Services, nunca por IP.
+
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: frontend-config-virtual4insanity  # Nombre único para no chocar con posibles configs de otros
+  name: frontend-config
   namespace: virtual4insanity
 data:
   MIEMBROS_URL: "http://api-miembros:5000"
@@ -10,48 +13,59 @@ data:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: frontend-virtual4insanity        # Nombre aislado para tu despliegue
+  name: frontend
   namespace: virtual4insanity
   labels:
-    app: frontend-virtual4insanity
+    app: frontend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: frontend-virtual4insanity
+      app: frontend
   template:
     metadata:
       labels:
-        app: frontend-virtual4insanity
+        app: frontend
     spec:
       containers:
-      - name: frontend
-        image: us-central1-docker.pkg.dev/gimnasio-virtual4insanity/gimnasio/frontend:latest
-        ports:
-        - containerPort: 80
-        env:
-        - name: MIEMBROS_URL
-          valueFrom:
-            configMapKeyRef:
-              name: frontend-config-virtual4insanity
-              key: MIEMBROS_URL
-        - name: CLASES_URL
-          valueFrom:
-            configMapKeyRef:
-              name: frontend-config-virtual4insanity
-              key: CLASES_URL
+        - name: frontend
+          image: us-central1-docker.pkg.dev/gimnasio-virtual4insanity/gimnasio/frontend:v1
+          ports:
+            - containerPort: 80
+          envFrom:
+            - configMapRef:
+                name: frontend-config
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
 ---
+# IP pública: GKE crea un balanceador de carga para este Service
 apiVersion: v1
 kind: Service
 metadata:
-  name: frontend-service-virtual4insanity # Servicio independiente
+  name: frontend
   namespace: virtual4insanity
   labels:
-    app: frontend-virtual4insanity
+    app: frontend
 spec:
   type: LoadBalancer
   selector:
-    app: frontend-virtual4insanity
+    app: frontend
   ports:
-  - port: 80
-    targetPort: 80
+    - port: 80
+      targetPort: 80
