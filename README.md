@@ -27,7 +27,7 @@ Proyecto Final del curso **Virtualización** (Universidad Rafael Landívar, Facu
 
 ## 3. Arquitectura general del sistema
 
-El sistema se ejecuta dentro de Google Cloud Platform en la región **`us-central1`** (zona **`us-central1-a`**) sobre el clúster GKE Standard zonal **`gke-virtual4insanity`** (conformado por un node pool de **2 nodos `e2-small` de tipo Spot**) y opera de forma aislada dentro del namespace **`virtual4insanity`**.
+El sistema se ejecuta dentro de Google Cloud Platform en el proyecto **`gimnasio-virtual4insanity`**, región **`us-central1`** (zona **`us-central1-a`**), sobre el clúster GKE Standard zonal **`gke-virtual4insanity`** (conformado por el node pool `pool-spot` de **2 nodos `e2-small` de tipo Spot** con discos `pd-balanced` de 30 GB) y opera de forma aislada dentro del namespace **`virtual4insanity`**.
 
 ![Diagrama de Arquitectura del Sistema en GKE](docs/arquitectura.png)
 
@@ -43,7 +43,7 @@ El sistema se ejecuta dentro de Google Cloud Platform en la región **`us-centra
 | **Frontend Web** | `frontend` | `80` | `LoadBalancer` (puerto `80`) | Punto de entrada público externo | Rol 4 |
 
 1. **Punto de entrada público:** El navegador del usuario se conecta únicamente a la dirección IPv4 pública del `Service` tipo `LoadBalancer` (`frontend`, puerto `80`).
-2. **Enrutamiento por DNS interno (Nginx):** El contenedor del `frontend` sirve la aplicación estática Vue 3 (`dist/`) en `/` y actúa como proxy inverso reenviando `/api/miembros...` hacia `http://api-miembros:5000` y `/api/clases...` hacia `http://api-clases:5000`. Nunca se utilizan direcciones IP de pods.
+2. **Frontend y enrutamiento por DNS interno:** El contenedor `frontend` (Flask + Gunicorn + Bootstrap 5 en el puerto `80`, configurado mediante el `ConfigMap` `frontend-config` con `MIEMBROS_URL=http://api-miembros:5000` y `CLASES_URL=http://api-clases:5000`) consulta por DNS interno a ambos microservicios para renderizar en `/` las tarjetas con los carnés del equipo (**A4**), los miembros inscritos y las clases programadas (**B4**). Además, expone la pasarela `/api/<servicio>/<resto>` ([frontend/app.py](frontend/app.py)) que reenvía las llamadas `/api/miembros...` hacia `http://api-miembros:5000` y `/api/clases...` hacia `http://api-clases:5000` (**E6**). Nunca se utilizan direcciones IP de pods.
 3. **Validación entre microservicios:** Al crear o actualizar una clase programada, `api-clases` consulta `GET http://api-miembros:5000/api/miembros/<miembro_id>` para confirmar que el miembro exista.
 4. **Persistencia de datos:** `api-miembros` y `api-clases` se conectan a PostgreSQL 16 mediante el nombre DNS `db:5432`. El `Deployment` `db` monta el volumen persistente `db-pvc` (`1 Gi`, `ReadWriteOnce`) en `/var/lib/postgresql/data` con `PGDATA=/var/lib/postgresql/data/pgdata` y carga el esquema inicial desde el `ConfigMap` `db-init` ([db/init.sql](db/init.sql)).
 
@@ -54,10 +54,10 @@ El sistema se ejecuta dentro de Google Cloud Platform en la región **`us-centra
 | Capa | Tecnología |
 | :--- | :--- |
 | **Microservicios (`api-miembros`, `api-clases`)** | Python 3.12 (`python:3.12-slim`), Flask 3.0.3, Gunicorn 22.0.0 y `psycopg2-binary` |
-| **Frontend (`frontend`)** | Vue 3 con Vite, servido por Nginx en contenedor ligero (puerto 80) |
+| **Frontend (`frontend`)** | Python 3.12 (`python:3.12-slim`), Flask 3.0.3, Gunicorn 22.0.0 (`0.0.0.0:80`), Jinja2 y Bootstrap 5 |
 | **Base de datos (`db`)** | PostgreSQL 16 (`postgres:16-alpine`), base `gimnasio` con tablas `integrantes`, `miembros` y `clases` |
-| **Orquestación** | Kubernetes en Google Kubernetes Engine (GKE Standard zonal) |
-| **Infraestructura y Registro** | Terraform (IaC) y Google Artifact Registry (`us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio`) |
+| **Orquestación** | Kubernetes en Google Kubernetes Engine (GKE Standard zonal, clúster `gke-virtual4insanity`) |
+| **Infraestructura y Registro** | Terraform (`>= 1.5`, provider `hashicorp/google ~> 6.0`) y Google Artifact Registry (`us-central1-docker.pkg.dev/gimnasio-virtual4insanity/gimnasio`) |
 
 ---
 
@@ -66,13 +66,13 @@ El sistema se ejecuta dentro de Google Cloud Platform en la región **`us-centra
 | Carpeta / Archivo | Contenido | Responsable | Estado actual |
 | :--- | :--- | :--- | :--- |
 | [CONTRATO.md](CONTRATO.md) | Acuerdos técnicos del equipo: nombres, rutas REST, puertos, tablas y variables | Equipo | Completo |
-| `terraform/` | Declaración del clúster GKE, node pool Spot (`2 × e2-small`) y Artifact Registry ([terraform/README.md](terraform/README.md)) | Rol 1 | *Pendiente de entrega y validación (`main.tf`, `variables.tf`, `outputs.tf`)* |
+| `terraform/` | Clúster GKE Standard zonal, node pool Spot (`pool-spot`, `2 × e2-small`), Service Account y Artifact Registry ([main.tf](terraform/main.tf), [variables.tf](terraform/variables.tf), [outputs.tf](terraform/outputs.tf), [terraform.tfvars.example](terraform/terraform.tfvars.example)) | Rol 1 | Completo |
 | `db/` | Script SQL de inicialización de tablas y carnés del equipo ([db/init.sql](db/init.sql)) | Rol 2 | Completo |
 | `services/miembros/` | Microservicio `api-miembros` ([app.py](services/miembros/app.py), [Dockerfile](services/miembros/Dockerfile), [requirements.txt](services/miembros/requirements.txt)) | Rol 2 | Completo |
-| `services/clases/` | Microservicio `api-clases` (`app.py`, `database.py`, `Dockerfile`, `requirements.txt` en rama `feature/api-clases`) | Rol 3 | *En rama `feature/api-clases` (pendiente merge a `develop`)* |
-| `frontend/` | Aplicación web Vue 3 + configuración de proxy Nginx + `Dockerfile` ([frontend/README.md](frontend/README.md)) | Rol 4 | *Pendiente de entrega y validación* |
-| `k8s/` | Manifiestos YAML de Kubernetes ([00-namespace.yaml](k8s/00-namespace.yaml), [10-db.yaml](k8s/10-db.yaml), [20-api-miembros.yaml](k8s/20-api-miembros.yaml), [secret.example.yaml](k8s/secret.example.yaml)) | Rol 5 (coordina) | Parcial *(pendientes `01-configmap.yaml`, `30-api-clases.yaml` y `40-frontend.yaml`)* |
-| `docs/` | Diagrama ([docs/arquitectura.png](docs/arquitectura.png), [docs/arquitectura.mmd](docs/arquitectura.mmd)), costos ([docs/estimacion-costo.md](docs/estimacion-costo.md)) y `docs/evidencias/` | Rol 5 | Completo (evidencias en vivo sujetas al despliegue) |
+| `services/clases/` | Microservicio `api-clases` ([app.py](services/clases/app.py), [database.py](services/clases/database.py), [Dockerfile](services/clases/Dockerfile), [requirements.txt](services/clases/requirements.txt)) | Rol 3 | Completo |
+| `frontend/` | Interfaz web y proxy inverso en Flask + Gunicorn ([app.py](frontend/app.py), [templates/index.html](frontend/templates/index.html), [Dockerfile](frontend/Dockerfile), [requirements.txt](frontend/requirements.txt)) | Rol 4 | Completo |
+| `k8s/` | Manifiestos YAML de Kubernetes ([00-namespace.yaml](k8s/00-namespace.yaml), [01-configmap.yaml](k8s/01-configmap.yaml), [10-db.yaml](k8s/10-db.yaml), [20-api-miembros.yaml](k8s/20-api-miembros.yaml), [30-api-clases.yaml](k8s/30-api-clases.yaml), [40-frontend.yaml](k8s/40-frontend.yaml), [secret.example.yaml](k8s/secret.example.yaml)) | Rol 5 (coordina) | Completo |
+| `docs/` | Diagrama ([docs/arquitectura.png](docs/arquitectura.png), [docs/arquitectura.mmd](docs/arquitectura.mmd)), costos ([docs/estimacion-costo.md](docs/estimacion-costo.md)), guía de evidencias ([docs/guia-evidencias-A-G.md](docs/guia-evidencias-A-G.md)) y `docs/evidencias/` | Rol 5 | Completo |
 
 ---
 
@@ -93,17 +93,17 @@ Antes de ejecutar el despliegue, verifique contar con las siguientes herramienta
 2. **Terraform** (`>= 1.5`).
 3. **kubectl** (`>= 1.28`).
 4. **Docker Desktop / Docker Engine** en ejecución para construir y publicar las imágenes.
-5. Un proyecto activo en **Google Cloud Platform** con facturación vinculada y alerta de presupuesto configurada.
+5. Acceso al proyecto de Google Cloud **`gimnasio-virtual4insanity`** con facturación vinculada y alerta de presupuesto configurada.
 
 ---
 
 ## 8. Configuración inicial de Google Cloud (Pre-vuelo)
 
-1. Autenticarse en Google Cloud y configurar el proyecto activo (reemplazar `<PROJECT_ID>` por el identificador real del proyecto provisto por el Rol 1):
+1. Autenticarse en Google Cloud y configurar el proyecto oficial del equipo (`gimnasio-virtual4insanity`):
 
 ```bash
 gcloud auth login
-gcloud config set project <PROJECT_ID>
+gcloud config set project gimnasio-virtual4insanity
 gcloud config set compute/region us-central1
 gcloud config set compute/zone us-central1-a
 ```
@@ -115,13 +115,7 @@ gcloud auth list
 gcloud config list
 ```
 
-3. Habilitar las APIs necesarias de Compute Engine, Kubernetes Engine y Artifact Registry:
-
-```bash
-gcloud services enable compute.googleapis.com container.googleapis.com artifactregistry.googleapis.com
-```
-
-4. Instalar y verificar el plugin de autenticación de GKE para `kubectl`:
+3. Instalar y verificar el plugin de autenticación de GKE para `kubectl`:
 
 ```bash
 gcloud components install gke-gcloud-auth-plugin
@@ -132,20 +126,20 @@ gke-gcloud-auth-plugin --version
 
 ## 9. Despliegue de la infraestructura con Terraform (Rol 1)
 
-> **Nota de estado:** Los archivos `main.tf`, `variables.tf`, `outputs.tf` y `terraform.tfvars.example` en `terraform/` están pendientes de integración por parte del **Rol 1**. Una vez integrados, el procedimiento estándar acordado en [terraform/README.md](terraform/README.md) es el siguiente:
+Los archivos [terraform/main.tf](terraform/main.tf), [terraform/variables.tf](terraform/variables.tf) y [terraform/outputs.tf](terraform/outputs.tf) declaran la habilitación automática de APIs (`container`, `artifactregistry`, `compute`, `iam`), el repositorio Docker `gimnasio` en Artifact Registry, la cuenta de servicio `gke-nodos-virtual4insanity` con permiso `roles/artifactregistry.reader`, el clúster GKE Standard zonal `gke-virtual4insanity` y el node pool `pool-spot` con 2 nodos `e2-small` Spot y discos `pd-balanced` de 30 GB.
 
-1. Ingresar al directorio `terraform/` y crear el archivo local `terraform.tfvars` (excluido en `.gitignore`) a partir de la plantilla:
+1. Ingresar al directorio `terraform/` y crear el archivo local `terraform.tfvars` (excluido en [.gitignore](.gitignore)) a partir de [terraform/terraform.tfvars.example](terraform/terraform.tfvars.example):
 
 ```bash
 cd terraform
 cp terraform.tfvars.example terraform.tfvars
 ```
 
-2. Confirmar en `terraform.tfvars` los valores acordados en [CONTRATO.md](CONTRATO.md):
-   - Identificador del proyecto: `<PROJECT_ID>`
-   - Región / Zona: `us-central1` / `us-central1-a`
-   - Nombre del clúster: `gke-virtual4insanity`
-   - Repositorio de Artifact Registry: `gimnasio`
+2. Definir en `terraform.tfvars` el ID real del proyecto:
+
+```hcl
+project_id = "gimnasio-virtual4insanity"
+```
 
 3. Inicializar Terraform, validar la sintaxis y generar el plan de ejecución (**Criterio D3**):
 
@@ -161,19 +155,19 @@ terraform plan
 terraform apply
 ```
 
-5. Volver a la raíz del repositorio y conectar `kubectl` al clúster recién creado:
+5. Volver a la raíz del repositorio y conectar `kubectl` al clúster recién creado (usando el comando devuelto en el output `get_credentials_command`):
 
 ```bash
 cd ..
-gcloud container clusters get-credentials gke-virtual4insanity --zone us-central1-a --project <PROJECT_ID>
-kubectl get nodes -o wide
+gcloud container clusters get-credentials gke-virtual4insanity --zone us-central1-a --project gimnasio-virtual4insanity
+kubectl get nodes -L cloud.google.com/gke-spot,node.kubernetes.io/instance-type -o wide
 ```
 
 ---
 
 ## 10. Construcción y publicación de imágenes en Artifact Registry (Criterios C1–C3)
 
-Según la sección 3 de [CONTRATO.md](CONTRATO.md), **todos los manifiestos de Kubernetes referencian exclusivamente imágenes alojadas en Artifact Registry** bajo la ruta `us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/<imagen>:<tag>` y **nunca se utiliza el tag `latest`**.
+Todos los manifiestos en `k8s/` referencian exclusivamente imágenes alojadas en Artifact Registry bajo la ruta `us-central1-docker.pkg.dev/gimnasio-virtual4insanity/gimnasio/<imagen>:<tag>` y nunca se utiliza el tag `latest`.
 
 1. Configurar Docker para autenticarse contra el registro de `us-central1`:
 
@@ -182,41 +176,38 @@ gcloud auth configure-docker us-central1-docker.pkg.dev
 ```
 
 2. **Imagen de Base de Datos (`postgres:16-alpine` — Rol 3):**
-   Etiquetar la imagen oficial y subirla al repositorio del equipo para cumplir con el criterio **C3**:
 
 ```bash
 docker pull postgres:16-alpine
-docker tag postgres:16-alpine us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/postgres:16-alpine
-docker push us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/postgres:16-alpine
+docker tag postgres:16-alpine us-central1-docker.pkg.dev/gimnasio-virtual4insanity/gimnasio/postgres:16-alpine
+docker push us-central1-docker.pkg.dev/gimnasio-virtual4insanity/gimnasio/postgres:16-alpine
 ```
 
 3. **Imagen del Microservicio Miembros (`api-miembros:v1` — Rol 2):**
 
 ```bash
-docker build -t us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/api-miembros:v1 ./services/miembros
-docker push us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/api-miembros:v1
+docker build -t us-central1-docker.pkg.dev/gimnasio-virtual4insanity/gimnasio/api-miembros:v1 ./services/miembros
+docker push us-central1-docker.pkg.dev/gimnasio-virtual4insanity/gimnasio/api-miembros:v1
 ```
 
 4. **Imagen del Microservicio Clases (`api-clases:v1` y `v2` para Rolling Update — Rol 3):**
-   *(Pendiente de merge de `feature/api-clases` a `develop`)*
 
 ```bash
-docker build -t us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/api-clases:v1 ./services/clases
-docker push us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/api-clases:v1
+docker build -t us-central1-docker.pkg.dev/gimnasio-virtual4insanity/gimnasio/api-clases:v1 ./services/clases
+docker push us-central1-docker.pkg.dev/gimnasio-virtual4insanity/gimnasio/api-clases:v1
 ```
 
 5. **Imagen del Frontend (`frontend:v1` — Rol 4):**
-   *(Pendiente de entrega de `frontend/Dockerfile` por el Rol 4)*
 
 ```bash
-docker build -t us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/frontend:v1 ./frontend
-docker push us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio/frontend:v1
+docker build -t us-central1-docker.pkg.dev/gimnasio-virtual4insanity/gimnasio/frontend:v1 ./frontend
+docker push us-central1-docker.pkg.dev/gimnasio-virtual4insanity/gimnasio/frontend:v1
 ```
 
-6. Verificar el listado de imágenes publicadas en el repositorio (**Criterio C2**):
+6. Verificar el listado de las 4 imágenes publicadas en el repositorio (**Criterio C2**):
 
 ```bash
-gcloud artifacts docker images list us-central1-docker.pkg.dev/<PROJECT_ID>/gimnasio --include-tags
+gcloud artifacts docker images list us-central1-docker.pkg.dev/gimnasio-virtual4insanity/gimnasio --include-tags
 ```
 
 ---
@@ -243,59 +234,55 @@ cp k8s/secret.example.yaml k8s/secret.yaml
      DB_PASSWORD: <DEFINIR_CONTRASENA_SEGURA>
    ```
 
-2. **ConfigMap de aplicación (`gimnasio-config` — `k8s/01-configmap.yaml`, Rol 4):**
-   *(Archivo `k8s/01-configmap.yaml` pendiente de entrega por el Rol 4)*. Contiene los parámetros no sensibles definidos en la sección 8 de [CONTRATO.md](CONTRATO.md):
-   - `DB_HOST`: `db`
-   - `DB_PORT`: `5432`
-   - `DB_NAME`: `gimnasio`
-   - `MIEMBROS_URL`: `http://api-miembros:5000`
-   - `EQUIPO`: `virtual4insanity`
-
-3. **Actualización del `<PROJECT_ID>` en los manifiestos de Deployment:**
-   Antes de aplicar los manifiestos, asegúrese de que el placeholder `PROJECT_ID` en las rutas `image: us-central1-docker.pkg.dev/PROJECT_ID/gimnasio/...` dentro de `k8s/10-db.yaml`, `k8s/20-api-miembros.yaml`, `k8s/30-api-clases.yaml` y `k8s/40-frontend.yaml` corresponda al identificador real del proyecto de Google Cloud.
+2. **ConfigMaps del sistema:**
+   - `gimnasio-config` ([k8s/01-configmap.yaml](k8s/01-configmap.yaml)): Inyecta `DB_HOST=db`, `DB_PORT=5432`, `DB_NAME=gimnasio`, `MIEMBROS_URL=http://api-miembros:5000` y `EQUIPO=virtual4insanity` en los microservicios y base de datos.
+   - `frontend-config` (incluido en [k8s/40-frontend.yaml](k8s/40-frontend.yaml)): Inyecta `MIEMBROS_URL=http://api-miembros:5000` y `CLASES_URL=http://api-clases:5000` en el Deployment `frontend`.
+   - `db-init` (incluido en [k8s/10-db.yaml](k8s/10-db.yaml)): Monta el script `init.sql` en `/docker-entrypoint-initdb.d` para inicializar las tablas `integrantes`, `miembros` y `clases` cuando el volumen persistente está vacío.
 
 ---
 
 ## 12. Aplicación ordenada de los manifiestos de Kubernetes
 
-Todos los recursos se despliegan en el namespace `virtual4insanity` siguiendo el orden establecido en [CONTRATO.md](CONTRATO.md) y [k8s/README.md](k8s/README.md):
+Todos los recursos se despliegan en el namespace `virtual4insanity` siguiendo el orden establecido en [k8s/README.md](k8s/README.md):
 
-1. **Paso 1 — Crear primero el Namespace oficial (`k8s/00-namespace.yaml`, Criterio A5):**
+1. **Paso 1 — Crear primero el Namespace oficial ([k8s/00-namespace.yaml](k8s/00-namespace.yaml), Criterio A5):**
 
 ```bash
 kubectl apply -f k8s/00-namespace.yaml
 kubectl get namespace virtual4insanity --show-labels
 ```
 
-2. **Paso 2 — Aplicar la configuración no sensible (`ConfigMap`) y las credenciales (`Secret`):**
+2. **Paso 2 — Aplicar la configuración no sensible ([k8s/01-configmap.yaml](k8s/01-configmap.yaml)) y las credenciales (`k8s/secret.yaml`):**
 
 ```bash
 kubectl apply -f k8s/01-configmap.yaml
 kubectl apply -f k8s/secret.yaml
 ```
-*(Nota: `k8s/01-configmap.yaml` está pendiente de integración por el Rol 4).*
 
-3. **Paso 3 — Desplegar la base de datos PostgreSQL con su PVC (`db-pvc`) y script de inicio (`db-init`):**
+3. **Paso 3 — Desplegar la base de datos PostgreSQL con su PVC (`db-pvc`) y script de inicio ([k8s/10-db.yaml](k8s/10-db.yaml)):**
 
 ```bash
 kubectl apply -f k8s/10-db.yaml
 kubectl rollout status deployment/db -n virtual4insanity
 ```
 
-4. **Paso 4 — Desplegar los microservicios `api-miembros` y `api-clases`:**
+4. **Paso 4 — Desplegar los microservicios `api-miembros` ([k8s/20-api-miembros.yaml](k8s/20-api-miembros.yaml)) y `api-clases` ([k8s/30-api-clases.yaml](k8s/30-api-clases.yaml)):**
 
 ```bash
 kubectl apply -f k8s/20-api-miembros.yaml
 kubectl apply -f k8s/30-api-clases.yaml
+kubectl rollout status deployment/api-miembros -n virtual4insanity
+kubectl rollout status deployment/api-clases -n virtual4insanity
 ```
-*(Nota: `k8s/30-api-clases.yaml` está pendiente de integración por el Rol 3).*
 
-5. **Paso 5 — Desplegar el `frontend` y su `Service` tipo `LoadBalancer`:**
+5. **Paso 5 — Desplegar el `frontend` y su `Service` tipo `LoadBalancer` ([k8s/40-frontend.yaml](k8s/40-frontend.yaml)):**
 
 ```bash
 kubectl apply -f k8s/40-frontend.yaml
+kubectl rollout status deployment/frontend -n virtual4insanity
 ```
-*(Nota: `k8s/40-frontend.yaml` está pendiente de integración por el Rol 4).*
+
+*(También es posible aplicar todos los manifiestos restantes de una vez con `kubectl apply -f k8s/` después de haber aplicado `00-namespace.yaml` y `secret.yaml`).*
 
 ---
 
@@ -316,6 +303,7 @@ kubectl get pvc -n virtual4insanity
 3. **Demostrar la inyección del ConfigMap y del Secret dentro de un pod (Criterios E2 y E3):**
 
 ```bash
+kubectl describe configmap gimnasio-config -n virtual4insanity
 kubectl exec -n virtual4insanity deploy/api-miembros -- printenv DB_HOST DB_PORT DB_NAME MIEMBROS_URL EQUIPO
 kubectl exec -n virtual4insanity deploy/api-miembros -- printenv DB_USER
 ```
@@ -340,7 +328,7 @@ http://<EXTERNAL_IP>
 
 ## 15. Pruebas de funcionamiento de los dos CRUD y carnés (Criterios A4, B1, B2, B4 y E6)
 
-A través de la IP pública del `frontend` (que enruta hacia `http://api-miembros:5000` y `http://api-clases:5000` mediante Nginx) se pueden verificar todas las operaciones de la API acordadas en la sección 7 de [CONTRATO.md](CONTRATO.md):
+A través de la IP pública del `frontend` (que reenvía `/api/miembros...` hacia `http://api-miembros:5000` y `/api/clases...` hacia `http://api-clases:5000` usando los nombres DNS internos de sus Services) se verifican todas las operaciones de la API acordadas en la sección 7 de [CONTRATO.md](CONTRATO.md):
 
 ### 15.1 Verificación de salud y listado de carnés del equipo (Criterio A4)
 
@@ -396,6 +384,8 @@ curl -X PUT http://<EXTERNAL_IP>/api/clases/4 \
 curl -X DELETE http://<EXTERNAL_IP>/api/clases/4
 ```
 
+*(Al recargar `http://<EXTERNAL_IP>` en el navegador, la interfaz web del frontend muestra en pantalla las tablas actualizadas con los datos devueltos por ambos microservicios).*
+
 ---
 
 ## 16. Operaciones en Kubernetes (Sección F de la rúbrica)
@@ -430,7 +420,11 @@ kubectl get pods -n virtual4insanity -o wide
 ### 16.3 Actualización progresiva de imagen (*Rolling Update*, Criterio F3 — Rol 3) y Logs (Criterio F4)
 
 ```bash
-# Actualizar la imagen en el manifiesto de v1 a v2 y aplicar el cambio declarativo
+# Construir y publicar la versión v2 de api-clases en Artifact Registry
+docker build -t us-central1-docker.pkg.dev/gimnasio-virtual4insanity/gimnasio/api-clases:v2 ./services/clases
+docker push us-central1-docker.pkg.dev/gimnasio-virtual4insanity/gimnasio/api-clases:v2
+
+# Actualizar image: .../api-clases:v2 en k8s/30-api-clases.yaml y aplicar declarativamente
 kubectl apply -f k8s/30-api-clases.yaml
 kubectl rollout status deployment/api-clases -n virtual4insanity
 kubectl describe deployment api-clases -n virtual4insanity
